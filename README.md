@@ -5,7 +5,9 @@ k6, locust, JMeter, or perfscale's own native step engine — and collect the
 metrics as a downloadable artifact, straight from a GitHub Actions workflow.
 
 The action downloads the pinned `perfscale` release binary for the runner's
-OS/arch, verifies its `sha256`, runs your test, and packs the run summary plus
+OS/arch, verifies its `sha256` against the release's `sha256sums.txt` (fails
+closed when the checksum is missing or mismatched), runs your test, and packs
+the run summary plus
 any generated metrics files into a single zip. By default it also renders the
 metric table straight into the **GitHub Actions job summary** and writes a
 machine-readable `perfscale-summary.json` (requests, RPS, latency percentiles,
@@ -83,6 +85,7 @@ jmeter process exit code is the gate (no thresholds integration).
 | Input | Default | Description |
 |---|---|---|
 | `version` | `latest` | perfscale release to install (tag like `v0.2.0`, or `latest`). |
+| `verify-checksum` | `true` | Verify the binary against the release's `sha256sums.txt`. Set to `false` to skip verification when the release ships no checksum entry for your OS/arch (not recommended). |
 | `k6` | — | Path to a k6 `.js` script (`perfscale run --k6`). |
 | `locust` | — | Path to a locustfile (`perfscale run --locust`). |
 | `jmeter` | — | Path to a JMeter `.jmx` test plan (`perfscale run --jmeter`). Requires `jmeter` on `PATH`. |
@@ -99,6 +102,10 @@ jmeter process exit code is the gate (no thresholds integration).
 `summary-export` and `job-summary` need a perfscale release that ships
 `--summary-export`; on older releases the action degrades to a warning and
 runs the test without them.
+
+If the runner has no zip tool, the artifact is packed as `.tar.gz` instead —
+the `output` extension is adjusted automatically and `output-file` points at
+the real path.
 
 ## Outputs
 

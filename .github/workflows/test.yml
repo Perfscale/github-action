@@ -13,7 +13,7 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
       - name: Run native step engine
         id: loadtest
@@ -31,7 +31,7 @@ jobs:
           test -s "${out}" || { echo "missing output artifact: ${out}"; exit 1; }
           echo "ok: ${out}"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: perfscale-metrics-${{ matrix.os }}
           path: ${{ steps.loadtest.outputs.output-file }}

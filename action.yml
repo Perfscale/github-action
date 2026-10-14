@@ -10,6 +10,10 @@ inputs:
     description: 'perfscale release to install (a tag like v0.2.0, or "latest").'
     required: false
     default: 'latest'
+  verify-checksum:
+    description: 'Verify the downloaded binary against the release''s sha256sums.txt. Set to ''false'' to skip verification when the release ships no checksum entry for your OS/arch (not recommended).'
+    required: false
+    default: 'true'
   k6:
     description: 'Path to a k6 .js script. Runs via `perfscale run --k6`. Mutually exclusive with `locust`, `jmeter` and `file`.'
     required: false
@@ -80,6 +84,7 @@ runs:
       shell: bash
       env:
         PERFSCALE_VERSION: ${{ inputs.version }}
+        VERIFY_CHECKSUM: ${{ inputs.verify-checksum }}
       run: |
         set -euo pipefail
 
@@ -132,7 +137,10 @@ runs:
           fi
           echo "checksum ok: ${asset}"
         else
-          echo "::warning::no checksum entry for ${asset} in sha256sums.txt — skipping verification"
+          if [ "${VERIFY_CHECKSUM}" = "true" ]; then
+            echo "::error::no checksum entry for ${asset} in sha256sums.txt — refusing to install an unverified binary (set 'verify-checksum: \"false\"' to bypass, not recommended)"; exit 1
+          fi
+          echo "::warning::no checksum entry for ${asset} in sha256sums.txt — skipping verification (verify-checksum: false)"
         fi
 
         target="${bindir}/perfscale${ext}"
@@ -250,7 +258,8 @@ runs:
         elif command -v powershell >/dev/null 2>&1; then
           powershell -NoProfile -Command "Compress-Archive -Path '${staging}/*' -DestinationPath '${out}' -Force"
         else
-          echo "::warning::no zip tool available — writing a tar.gz instead of a zip"
+          out="${out%.zip}.tar.gz"
+          echo "::warning::no zip tool available — packing a tar.gz instead: ${out}"
           tar -czf "${out}" -C "${staging}" .
         fi
 
