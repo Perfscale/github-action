@@ -77,6 +77,64 @@ jobs:
           unzip -l "${OUTPUT_FILE}" | grep -q "summary.json" \
             || { echo "::error::summary.json not packed into the artifact"; exit 1; }
 
+  faker:
+    name: custom Faker library (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+
+      - name: Run the action with a GitHub release library
+        id: loadtest
+        uses: ./
+        with:
+          version: v0.28.0
+          file: examples/faker.test.yaml
+          config: examples/faker.config.yaml
+
+      - name: Assert generated values and outputs
+        shell: bash
+        env:
+          SUMMARY_JSON: ${{ steps.loadtest.outputs.summary-json }}
+          SUMMARY_FILE: ${{ steps.loadtest.outputs.summary-file }}
+          OUTPUT_FILE: ${{ steps.loadtest.outputs.output-file }}
+          EXIT_CODE: ${{ steps.loadtest.outputs.exit-code }}
+        run: |
+          set -euo pipefail
+
+          [ "${EXIT_CODE}" = "0" ] || { echo "::error::exit-code=${EXIT_CODE}"; exit 1; }
+          [ -f "${SUMMARY_FILE}" ] || { echo "::error::summary-file missing"; exit 1; }
+          [ -f "${OUTPUT_FILE}" ]  || { echo "::error::zip artifact missing"; exit 1; }
+          [ -n "${SUMMARY_JSON}" ] && [ -f "${SUMMARY_JSON}" ] \
+            || { echo "::error::summary-json missing — --summary-export did not run"; exit 1; }
+
+          log=$(<"${SUMMARY_FILE}")
+          [[ "${log}" == *"E2E_OK"* ]] \
+            || { echo "::error::Faker SQL validation did not pass"; exit 1; }
+          [[ "${log}" != *"E2E_FAIL"* ]] \
+            || { echo "::error::Faker SQL validation failed"; exit 1; }
+
+          jq -e '.meta.engine == "native"
+                 and .meta.vus == 1
+                 and .libraries.faker.calls > 0
+                 and .libraries.faker.errors == 0' "${SUMMARY_JSON}"
+
+          lock=$(<examples/perfscale.lock)
+          [[ "${lock}" == *"742a19abda8478e040907838850482702257b894210f1faee2b3660fa877cdab"* ]] \
+            || { echo "::error::Faker release digest is not pinned"; exit 1; }
+
+      - name: Assert zip contains summary.json
+        shell: bash
+        env:
+          OUTPUT_FILE: ${{ steps.loadtest.outputs.output-file }}
+        run: |
+          unzip -l "${OUTPUT_FILE}" | grep -q "summary.json" \
+            || { echo "::error::summary.json not packed into the artifact"; exit 1; }
+
   jmeter:
     name: jmeter engine
     runs-on: ubuntu-latest

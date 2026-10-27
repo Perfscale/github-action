@@ -74,7 +74,7 @@ outputs:
     description: 'Path to the zip artifact containing the summary and generated metrics files.'
     value: ${{ steps.pack.outputs.output-file }}
   exit-code:
-    description: 'Exit code returned by `perfscale run`.'
+    description: 'Exit code returned by `perfscale install` or `perfscale run`.'
     value: ${{ steps.run.outputs.exit-code }}
 
 runs:
@@ -179,6 +179,18 @@ runs:
           echo "::error::'config' is required when 'file' (native engine) is set"; exit 1
         fi
 
+        if [ -n "${IN_FILE}" ]; then
+          echo "+ perfscale install ${IN_FILE} ${IN_CONFIG}"
+          if perfscale install "${IN_FILE}" "${IN_CONFIG}"; then
+            :
+          else
+            code=$?
+            echo "::error::perfscale install failed with exit code ${code}"
+            echo "exit-code=${code}" >> "${GITHUB_OUTPUT}"
+            exit "${code}"
+          fi
+        fi
+
         cmd=(perfscale run)
         [ -n "${IN_K6}" ]     && cmd+=(--k6 "${IN_K6}")
         [ -n "${IN_LOCUST}" ] && cmd+=(--locust "${IN_LOCUST}")
@@ -215,9 +227,11 @@ runs:
         code=${PIPESTATUS[0]}
 
         [ -n "${summary_json}" ] && [ ! -f "${summary_json}" ] && summary_json=""
-        echo "summary-file=${summary}" >> "${GITHUB_OUTPUT}"
-        echo "summary-json=${summary_json}" >> "${GITHUB_OUTPUT}"
-        echo "exit-code=${code}" >> "${GITHUB_OUTPUT}"
+        {
+          echo "summary-file=${summary}"
+          echo "summary-json=${summary_json}"
+          echo "exit-code=${code}"
+        } >> "${GITHUB_OUTPUT}"
         exit "${code}"
 
     - name: Pack metrics
