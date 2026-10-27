@@ -1,0 +1,57 @@
+# yaml-language-server: $schema=../schema/test.schema.json
+#
+# Validate the custom Faker library without an external HTTP service.
+# Run: perfscale run -f examples/faker.test.yaml -c examples/faker.config.yaml
+steps:
+  - name: open db
+    use: std/db-connect@v1
+    with:
+      driver: sqlite
+      dsn: "sqlite::memory:"
+    outputs: db
+
+  - name: validate generated values
+    use: std/db-query@v1
+    with:
+      id: "${{ db.id }}"
+      query: >
+        SELECT CASE WHEN
+          instr(?, '%40') > 0 AND instr(?, '@') = 0
+          AND instr(?, '%20') > 0 AND instr(?, ' ') = 0
+          AND ? = '4111111111111111'
+          AND CAST(? AS INTEGER) BETWEEN CAST(strftime('%Y','now') AS INTEGER) + 1 AND CAST(strftime('%Y','now') AS INTEGER) + 71
+          AND CAST(? AS INTEGER) BETWEEN 1 AND 12
+          AND CAST(? AS INTEGER) BETWEEN 100 AND 999
+          AND CAST(? AS INTEGER) BETWEEN 10000 AND 99999
+          THEN 'E2E_OK' ELSE 'E2E_FAIL' END AS result,
+          ? AS email, ? AS street_address, ? AS city,
+          ? AS credit_card_number, ? AS expiration_year
+      params:
+        - "${faker.internet(email)}"
+        - "${faker.internet(email)}"
+        - "${faker.address(street_address)}"
+        - "${faker.address(street_address)}"
+        - "${faker.payment(credit_card_number)}"
+        - "${faker.payment(credit_card_expiration_year)}"
+        - "${faker.payment(credit_card_expiration_month)}"
+        - "${faker.payment(credit_card_cvv)}"
+        - "${faker.address(zip_code)}"
+        - "${faker.internet(email)}"
+        - "${faker.address(street_address)}"
+        - "${faker.address(city)}"
+        - "${faker.payment(credit_card_number)}"
+        - "${faker.payment(credit_card_expiration_year)}"
+    outputs: rows
+
+  - name: show result
+    use: std/log@v1
+    with:
+      message: "E2E-RESULT ${{ rows.data }}"
+
+  - name: close db
+    use: std/db-close@v1
+    with: { id: "${{ db.id }}" }
+
+  - name: pace iterations
+    use: std/sleep@v1
+    with: { seconds: 2 }

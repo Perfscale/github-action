@@ -1,0 +1,5 @@
+version = 1
+
+[[libraries]]
+use = "https://github.com/Perfscale/faker/releases/download/v0.1.0/faker.wasm"
+sha256 = "742a19abda8478e040907838850482702257b894210f1faee2b3660fa877cdab"

@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=../schema/config.schema.json
+vus: 1
+duration: 3s
+seed: 42
+libraries:
+  # Pin the GitHub release asset by content, not just by its URL.
+  - use: https://github.com/Perfscale/faker/releases/download/v0.1.0/faker.wasm
+    sha256: '742a19abda8478e040907838850482702257b894210f1faee2b3660fa877cdab'
+    as: faker
+    capabilities: []
+    with:
+      language: en
+      # Use percent-encoded values in forms and URL query strings.
+      encoding: url
